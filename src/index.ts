@@ -7,8 +7,8 @@ const openApiSpec = JSON.stringify({
   openapi: "3.0.0",
   info: {
     title: "Container Demo API",
-    version: "3.0.0",
-    description: "API de demostración para la práctica de contenedores",
+    version: "4.0.0",
+    description: "API de demostración con documentación Scalar",
   },
   paths: {
     "/": {
@@ -32,20 +32,62 @@ const openApiSpec = JSON.stringify({
   },
 });
 
-const swaggerHtml = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>API Docs</title>
-  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
-</head>
-<body>
-  <div id="swagger-ui"></div>
-  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-  <script>
-    SwaggerUIBundle({ url: "/api-docs", dom_id: '#swagger-ui' })
-  </script>
-</body>
+const scalarHtml = `<!DOCTYPE html>
+<html>
+  <head>
+    <title>API Reference</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body>
+    <script
+      id="api-reference"
+      type="application/json"
+      data-url="/api-docs"
+    >
+    {
+      "openapi": "3.0.0",
+      "info": {
+        "title": "Container Demo API",
+        "version": "4.0.0",
+        "description": "API de demostración con documentación Scalar"
+      },
+      "paths": {
+        "/": {
+          "get": {
+            "summary": "Endpoint raíz",
+            "responses": {
+              "200": {
+                "description": "Mensaje de saludo"
+              }
+            }
+          }
+        },
+        "/health": {
+          "get": {
+            "summary": "Health check",
+            "responses": {
+              "200": {
+                "description": "Estado de la aplicación"
+              }
+            }
+          }
+        },
+        "/info": {
+          "get": {
+            "summary": "Información de la app",
+            "responses": {
+              "200": {
+                "description": "Versión y detalles"
+              }
+            }
+          }
+        }
+      }
+    }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+  </body>
 </html>`;
 
 const server = createServer((req: IncomingMessage, res: ServerResponse) => {
@@ -60,7 +102,7 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     res.end(
       JSON.stringify({
         app: "container-demo",
-        version: "3.0",
+        version: "4.0",
         containerized: true,
       })
     );
@@ -74,7 +116,7 @@ const server = createServer((req: IncomingMessage, res: ServerResponse) => {
 
   if (req.url === "/docs") {
     res.setHeader("Content-Type", "text/html");
-    res.end(swaggerHtml);
+    res.end(scalarHtml);
     return;
   }
 
