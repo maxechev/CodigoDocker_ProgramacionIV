@@ -32,8 +32,21 @@ jobs:
       - name: Run container in background
         run: |
           docker run -d --name test-container -p 3000:3000 ${{ env.DOCKER_IMAGE }}:test
-          echo "Esperando 5 segundos a que Node.js inicie..."
-          sleep 5
+          echo "Esperando a que el contenedor inicie..."
+          
+          # Bucle para esperar hasta que el endpoint /health responda (máx 30 segundos)
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3000/health > /dev/null; then
+              echo "¡Contenedor listo y respondiendo!"
+              exit 0
+            fi
+            echo "Esperando... ($i/30)"
+            sleep 1
+          done
+          
+          echo "El contenedor no respondió a tiempo. Mostrando logs:"
+          docker logs test-container
+          exit 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -53,11 +66,11 @@ jobs:
           BASE_URL: http://127.0.0.1:3000
 
       - name: Stop and remove test container
-        if: always()
+        if: always() # Se ejecuta incluso si los tests fallan, para limpiar
         run: docker rm -f test-container
 
   push-to-docker-hub:
-    needs: test-and-build # Solo se ejecuta si los tests pasan (verde)
+    needs: test-and-build # ESTO ES CLAVE: Solo se ejecuta si el job anterior fue exitoso (verde)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
