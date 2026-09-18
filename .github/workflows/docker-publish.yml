@@ -1,4 +1,4 @@
-name: Build, Test and Push to Docker Hub
+name: CI/CD - Build, Test and Push
 
 on:
   push:
@@ -13,7 +13,7 @@ env:
   DOCKER_IMAGE: joelechev/container-demo
 
 jobs:
-  build-and-test:
+  test-and-build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -22,21 +22,20 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
+      - name: Build Docker image for testing
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: false
           load: true
           tags: ${{ env.DOCKER_IMAGE }}:test
 
       - name: Run container in background
         run: |
           docker run -d --name test-container -p 3000:3000 ${{ env.DOCKER_IMAGE }}:test
-          # Esperar 3 segundos a que Node.js inicie
-          sleep 3
+          echo "Esperando 5 segundos a que Node.js inicie..."
+          sleep 5
 
-      - name: Setup Node.js for Playwright
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -51,14 +50,14 @@ jobs:
       - name: Run Playwright Tests (El "Skill" de testing)
         run: npx playwright test
         env:
-          BASE_URL: http://localhost:3000
+          BASE_URL: http://127.0.0.1:3000
 
       - name: Stop and remove test container
         if: always()
         run: docker rm -f test-container
 
   push-to-docker-hub:
-    needs: build-and-test # Solo se ejecuta si los tests pasaron
+    needs: test-and-build # Solo se ejecuta si los tests pasan (verde)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -73,7 +72,7 @@ jobs:
           username: ${{ env.DOCKER_USERNAME }}
           password: ${{ env.DOCKER_PASSWORD }}
 
-      - name: Extract version from tag
+      - name: Extract version
         id: version
         run: |
           if [[ $GITHUB_REF == refs/tags/v* ]]; then

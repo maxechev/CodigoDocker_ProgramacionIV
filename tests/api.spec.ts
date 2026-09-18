@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // URL base de tu API (en CI será localhost, en local también)
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:3000';
 
 test.describe('API Container Demo - Endpoints', () => {
   
