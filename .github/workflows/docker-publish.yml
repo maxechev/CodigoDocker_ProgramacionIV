@@ -1,14 +1,11 @@
-name: Build and Push to Docker Hub
+name: Build, Test and Push to Docker Hub
 
 on:
   push:
     branches:
       - main
-    tags:
-      - 'v*'
-  pull_request:
-    branches:
-      - main
+  release:
+    types: [created]
 
 env:
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
@@ -16,7 +13,52 @@ env:
   DOCKER_IMAGE: joelechev/container-demo
 
 jobs:
-  build-and-push:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          load: true
+          tags: ${{ env.DOCKER_IMAGE }}:test
+
+      - name: Run container in background
+        run: |
+          docker run -d --name test-container -p 3000:3000 ${{ env.DOCKER_IMAGE }}:test
+          # Esperar 3 segundos a que Node.js inicie
+          sleep 3
+
+      - name: Setup Node.js for Playwright
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright Tests (El "Skill" de testing)
+        run: npx playwright test
+        env:
+          BASE_URL: http://localhost:3000
+
+      - name: Stop and remove test container
+        if: always()
+        run: docker rm -f test-container
+
+  push-to-docker-hub:
+    needs: build-and-test # Solo se ejecuta si los tests pasaron
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -40,7 +82,6 @@ jobs:
             VERSION="latest"
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Building version: $VERSION"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -50,12 +91,3 @@ jobs:
           tags: |
             ${{ env.DOCKER_IMAGE }}:${{ steps.version.outputs.version }}
             ${{ env.DOCKER_IMAGE }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  notify:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deployment success
-        run: echo "✅ Imagen publicada exitosamente en Docker Hub"
