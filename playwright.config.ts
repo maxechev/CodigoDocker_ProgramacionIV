@@ -9,7 +9,7 @@ export default defineConfig({
   reporter: 'html',
 
   use: {
-    // Base URL para que Playwright sepa a dónde apuntar
+    // Usamos 127.0.0.1 para evitar problemas de IPv6 en GitHub Actions
     baseURL: 'http://127.0.0.1:3000',
     trace: 'on-first-retry',
   },
@@ -29,11 +29,11 @@ export default defineConfig({
     },
   ],
 
-  // ← ESTA ES LA CLAVE PARA QUE FUNCIONE EN CI
+  // ← AQUÍ ESTÁ LA MAGIA
   webServer: {
     command: 'npm run build && npm run start',
     url: 'http://127.0.0.1:3000/health',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000, // 2 minutos de tiempo máximo para que arranque
+    reuseExistingServer: true, // <--- ESTO EVITA EL CONFLICTO DE PUERTO
+    timeout: 120_000,
   },
 });
